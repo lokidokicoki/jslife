@@ -2,7 +2,10 @@ var ctx = null;
 var canvas = null;
 var self = null;
 
-var grid = null;
+var front = null;
+var back = null;
+var cellWidth = 1
+var useFront = true;
 
 function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -10,87 +13,97 @@ function getRandomInt(min, max) {
 
 function makeGrid (x,y) {
 	// make grid
-	grid = [];
+	front = [];
+	back = [];
   	for (var i = 0; i < x; i++) {
-    	grid[i] = [];
+    	front[i] = [];
+    	back[i] = [];
   		for (var j = 0; j < y; j++) {
-			grid[i][j] = getRandomInt(0,1);
+			front[i][j] = getRandomInt(0,1);
+			back[i][j] = front[i][j];//getRandomInt(0,1);
 		}
   	}
 }
 
-function main (x,y) {
+function blink(){
+	front[2][1]=1;
+	front[2][2]=1;
+	front[2][3]=1;
+
+}
+
+function main (w,x,y) {
 	self = this;
 	canvas = document.getElementById('petri');
 	ctx = canvas.getContext('2d');
+	$('#petri').attr('width', w*x);
+	$('#petri').attr('height', w*y);
+	cellWidth=w;
+
 	makeGrid(x,y);
+
+	//blink();
+
 	draw();
 };
 
 function rules (cell, count){
-	var state = 0;
 	if (cell === 1){
 		// cell is alive
 		if (count < 2 || count > 3){
-			state = 0
-		}else{
-			state = 1;
+			cell = 0
 		}
 	}else{
 		if (count === 3){
 			cell = 1;
 		}
 	}
-	return state;
+	return cell;
 };
 
 function run () {
-	var xlen = grid.length;
-	var ylen = grid[0].length;
-	var newGrid = [];
-	newGrid = $.extend(newGrid, grid);
+	var xlen = front.length;
+	var ylen = front[0].length;
+	
+	var grid = null;
+	var newGrid = null;
+	if (useFront){
+		grid = front;
+		newGrid = back;
+	}else{
+		grid = back;
+		newGrid = front;
+	}
 
-	for (var x = 0; x < xlen; x++){
-		for (var y = 0; y < ylen; y++){
+	for (var y = 0; y < ylen; y++){
+		for (var x = 0; x < xlen; x++){
 			var cell = grid[x][y];
 
 			//count living neightbours
-			var nx = x-1;
 			var px = x+1;
+			var py = y+1;
+			var nx = x-1;
 			var ny = y-1;
-			var py = y+2;
 			var count = 0;
 
-			//top row
-			if (nx >= 0 && py < ylen)
-				count += grid[nx][py];
-
-			if (py < ylen)
-				count += grid[x][py];
-
-			if (px < xlen && py < ylen)
+			if (px < xlen && py < ylen && nx >= 0 && ny >=0){
 				count += grid[px][py];
-
-			// middle row
-			if (nx >= 0)
-				count += grid[nx][y];
-			//count += grid[x][y];
-			if (px < xlen)
 				count += grid[px][y];
-
-			// bottom row
-			if (nx >= 0 && ny >= 0)
-				count += grid[nx][ny];
-			if (ny >= 0)
-				count += grid[x][ny];
-			if (px < xlen && ny >= 0)
 				count += grid[px][ny];
+				count += grid[x][ny];
+				count += grid[nx][ny];
+				count += grid[nx][y];
+				count += grid[nx][py];
+				count += grid[x][py];
+			}
 
 			newGrid[x][y] = rules(cell, count);
 		}
 	}
 
-	grid = $.extend(grid, newGrid);
+	useFront = !useFront;
+
+
 	draw();
 };
 
@@ -99,22 +112,30 @@ function draw () {
 	var g = 0;//getRandomInt(0, 255);
 	var b = 0;//getRandomInt(0, 255);
 
+	var grid = null;
+	if (useFront){
+		grid = front;
+	}else{
+		grid = back;
+	}
 	var xlen = grid.length;
 	var ylen = grid[0].length;
+
 
 	for (var x = 0; x < xlen; x++){
 		for (var y = 0; y < ylen; y++){
 			var cell = grid[x][y];
 			if (cell === 1){
 				ctx.fillStyle = "rgb("+r+","+g+","+b+")";
-				ctx.fillRect (x, y, 1, 1);
 			}else{
 				ctx.fillStyle = "rgb(0,0,0)";
-				ctx.fillRect (x, y, 1, 1);
 			}
+			var xw = x*cellWidth;
+			var yw = y*cellWidth;
+			ctx.fillRect (xw, yw, cellWidth, cellWidth);
 		}
 	}
-	setTimeout(self.run, 100);
+	setTimeout(self.run, 50);
 };
 
 
